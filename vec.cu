@@ -55,39 +55,31 @@ struct TimerGuard {
   }
 };
 
-extern void initTrace(void);
-extern void finiTrace(void);
+void init_and_start_trace() {
+  libkineto_init(/*cpuOnly=*/false, /*logOnError=*/true);
+  if (!libkineto::api().isProfilerInitialized()) {
+    libkineto::api().initProfilerIfRegistered();
+  }
 
-void CUPTIAPI bufferRequestedTrampoline_(
-  uint8_t** buffer,
-  size_t* size,
-	size_t* maxNumRecords) {
-  // TODO
+	const std::set<libkineto::ActivityType> kCudaTypes = {
+			libkineto::ActivityType::GPU_MEMCPY,
+			libkineto::ActivityType::GPU_MEMSET,
+			libkineto::ActivityType::CONCURRENT_KERNEL,
+			// CUDA_RUNTIME appears in both kCpuTypes and kCudaTypes.
+			libkineto::ActivityType::CUDA_RUNTIME,
+	};
+
+  std::set<libkineto::ActivityType> k_activities;
+  k_activities.insert(kCudaTypes.begin(), kCudaTypes.end());
+
+  libkineto::api().activityProfiler().prepareTrace(k_activities);
+
+  libkineto::api().activityProfiler().startTrace();
 }
 
-void CUPTIAPI bufferCompletedTrampoline_(
-  CUcontext ctx,
-  uint32_t streamId,
-  uint8_t* buffer,
-  size_t /* unused */,
-	size_t validSize) {
-  // TODO
+void stop_trace() {
+  libkineto::api().activityProfiler().stopTrace();
 }
-
-void CUPTIAPI callback_switchboard_(
-  CUpti_CallbackDomain domain,
-  CUpti_CallbackId cbid,
-  const CUpti_CallbackData* cbInfo) {
-  // TODO
-}
-/*
-void myInitTrace(void) {
-  CUpti_SubscriberHandle subscriber{0};
-  CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_RUNTIME));
-  CUPTI_CALL(cuptiActivityRegisterCallbacks(bufferRequestedTrampoline_, bufferCompletedTrampoline_));
-  CUPTI_CALL(cuptiSubscribe(&subscriber, (CUpti_CallbackFunc)callback_switchboard_, NULL));
-}
-*/
 
 int main() {
 #define NSTEP 1000
@@ -117,34 +109,17 @@ int main() {
 	cudaGraph_t graph;
 	cudaGraphExec_t instance;
 
-        cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal);
-        for(int ikrnl=0; ikrnl<NKERNEL; ikrnl++){
-          shortKernel<<<blocks, threads, 0, stream>>>(out_d, in_d);
-        }
-        cudaStreamEndCapture(stream, &graph);
-        cudaGraphInstantiate(&instance, graph, NULL, NULL, 0);
-        graphCreated=true;
-
-  // myInitTrace();
-  libkineto_init(/*cpuOnly=*/false, /*logOnError=*/true);
-  if (!libkineto::api().isProfilerInitialized()) {
-    libkineto::api().initProfilerIfRegistered();
+  // PREPARE CUDA GRAPH
+  cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal);
+  for(int ikrnl=0; ikrnl<NKERNEL; ikrnl++){
+    shortKernel<<<blocks, threads, 0, stream>>>(out_d, in_d);
   }
+  cudaStreamEndCapture(stream, &graph);
+  cudaGraphInstantiate(&instance, graph, NULL, NULL, 0);
+  graphCreated=true;
 
-	const std::set<libkineto::ActivityType> kCudaTypes = {
-			libkineto::ActivityType::GPU_MEMCPY,
-			libkineto::ActivityType::GPU_MEMSET,
-			libkineto::ActivityType::CONCURRENT_KERNEL,
-			// CUDA_RUNTIME appears in both kCpuTypes and kCudaTypes.
-			libkineto::ActivityType::CUDA_RUNTIME,
-	};
-
-  std::set<libkineto::ActivityType> k_activities;
-  k_activities.insert(kCudaTypes.begin(), kCudaTypes.end());
-
-  libkineto::api().activityProfiler().prepareTrace(k_activities);
-
-  libkineto::api().activityProfiler().startTrace();
+  // INITIALIZE KINETO / CUPTI
+  init_and_start_trace();
 
   {
     TimerGuard guard("WITH cuda graph");
@@ -156,14 +131,9 @@ int main() {
     }
     cudaStreamSynchronize(stream);
   }
-  libkineto::api().activityProfiler().stopTrace();
 
-  /*
-  CUPTI_CALL(
-      cuptiActivityRegisterCallbacks(bufferRequestedTrampoline, bufferCompletedTrampoline));
-
-  CUPTI_CALL(cuptiActivityFlushAll(CUPTI_ACTIVITY_FLAG_FLUSH_FORCED));
-  */
+  // STOP KINETO / CUPTI
+  stop_trace();
 
   return 0;
 }
