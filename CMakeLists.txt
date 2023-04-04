@@ -14,6 +14,9 @@ if (NOT CUDA_INCLUDE_DIRS)
     set(CUDA_INCLUDE_DIRS "${CUDA_SOURCE_DIR}/include")
 endif()
 
+set(KINETO_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/kineto/libkineto/include")
+
+
 if (NOT CUPTI_INCLUDE_DIR)
     set(CUPTI_INCLUDE_DIR "${CUDA_SOURCE_DIR}/extras/CUPTI/include")
 endif()
@@ -43,7 +46,11 @@ set(CMAKE_CUDA_FLAGS -arch=sm_80)
 target_compile_options(cupti_cudagraphs PUBLIC -lcupti -lcuda)
 target_include_directories(cupti_cudagraphs PUBLIC
       $<BUILD_INTERFACE:${CUDA_INCLUDE_DIRS}>
-      $<BUILD_INTERFACE:${CUPTI_INCLUDE_DIR}>)
+      $<BUILD_INTERFACE:${CUPTI_INCLUDE_DIR}>
+      $<BUILD_INTERFACE:${KINETO_INCLUDE_DIR}>)
 # target_link_libraries(cupti_cudagraphs CUDA::cudart)
 # target_link_libraries(cupti_cudagraphs CUDA::cuda_driver)
-target_link_libraries(cupti_cudagraphs "${CUDA_cupti_LIBRARY}")
+target_link_libraries(cupti_cudagraphs
+    "${CUDA_cupti_LIBRARY}"
+    fmt::fmt-header-only
+    kineto)

@@ -5,6 +5,8 @@
 #include <iostream>
 #include <cupti.h>
 
+#include <libkineto.h>
+
 #define N 500000 // tuned such that kernel takes a few microseconds
 
 __global__ void shortKernel(float * out_d, float * in_d){
@@ -77,12 +79,14 @@ void CUPTIAPI callback_switchboard_(
   const CUpti_CallbackData* cbInfo) {
   // TODO
 }
+/*
 void myInitTrace(void) {
   CUpti_SubscriberHandle subscriber{0};
   CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_RUNTIME));
   CUPTI_CALL(cuptiActivityRegisterCallbacks(bufferRequestedTrampoline_, bufferCompletedTrampoline_));
   CUPTI_CALL(cuptiSubscribe(&subscriber, (CUpti_CallbackFunc)callback_switchboard_, NULL));
 }
+*/
 
 int main() {
 #define NSTEP 1000
@@ -112,7 +116,8 @@ int main() {
 	cudaGraph_t graph;
 	cudaGraphExec_t instance;
 
-  myInitTrace();
+  // myInitTrace();
+  libkineto_init(/*cpuOnly=*/false, /*logOnError=*/true);
 
   {
     TimerGuard guard("WITH cuda graph");
