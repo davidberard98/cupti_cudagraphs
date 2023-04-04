@@ -94,8 +94,6 @@ int main() {
   cudaStream_t stream;
   CHECK(cudaStreamCreate(&stream));
 
-  myInitTrace();
-
   float *in_d, *out_d;
   CHECK(cudaMalloc((float**)  &in_d, N*sizeof(float)));
   CHECK(cudaMalloc((float**) &out_d, N*sizeof(float)));
@@ -113,6 +111,9 @@ int main() {
 	bool graphCreated=false;
 	cudaGraph_t graph;
 	cudaGraphExec_t instance;
+
+  myInitTrace();
+
   {
     TimerGuard guard("WITH cuda graph");
     for(int istep=0; istep<NSTEP; istep++){

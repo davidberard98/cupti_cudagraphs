@@ -306,9 +306,9 @@ initTrace()
   CUPTI_CALL(cuptiGetTimestamp(&startTimestamp));
   */
   CUpti_SubscriberHandle subscriber{0};
+  CUPTI_CALL(cuptiSubscribe(&subscriber, (CUpti_CallbackFunc)callback_switchboard, NULL));
   CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_RUNTIME));
   CUPTI_CALL(cuptiActivityRegisterCallbacks(bufferRequestedTrampoline, bufferCompletedTrampoline));
-  CUPTI_CALL(cuptiSubscribe(&subscriber, (CUpti_CallbackFunc)callback_switchboard, NULL));
 }
 
 void finiTrace()
