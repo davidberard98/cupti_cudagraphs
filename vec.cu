@@ -127,9 +127,9 @@ int main() {
       std::cerr << " STEP " << istep << std::endl;
       if(!graphCreated){
       }
-      cudaGraphLaunch(instance, stream);
-    }
+      CHECK(cudaGraphLaunch(instance, stream));
     cudaStreamSynchronize(stream);
+    }
   }
 
   // STOP KINETO / CUPTI
