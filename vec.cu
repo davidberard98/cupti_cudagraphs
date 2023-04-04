@@ -117,6 +117,14 @@ int main() {
 	cudaGraph_t graph;
 	cudaGraphExec_t instance;
 
+        cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal);
+        for(int ikrnl=0; ikrnl<NKERNEL; ikrnl++){
+          shortKernel<<<blocks, threads, 0, stream>>>(out_d, in_d);
+        }
+        cudaStreamEndCapture(stream, &graph);
+        cudaGraphInstantiate(&instance, graph, NULL, NULL, 0);
+        graphCreated=true;
+
   // myInitTrace();
   libkineto_init(/*cpuOnly=*/false, /*logOnError=*/true);
   if (!libkineto::api().isProfilerInitialized()) {
@@ -141,16 +149,10 @@ int main() {
   {
     TimerGuard guard("WITH cuda graph");
     for(int istep=0; istep<NSTEP; istep++){
+      std::cerr << " STEP " << istep << std::endl;
       if(!graphCreated){
-        cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal);
-        for(int ikrnl=0; ikrnl<NKERNEL; ikrnl++){
-          shortKernel<<<blocks, threads, 0, stream>>>(out_d, in_d);
-        }
-        cudaStreamEndCapture(stream, &graph);
-        cudaGraphInstantiate(&instance, graph, NULL, NULL, 0);
-        graphCreated=true;
-        cudaGraphLaunch(instance, stream);
       }
+      cudaGraphLaunch(instance, stream);
     }
     cudaStreamSynchronize(stream);
   }
