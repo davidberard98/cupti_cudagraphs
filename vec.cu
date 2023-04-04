@@ -1,6 +1,7 @@
 #include <cstddef>
 #include <cuda_runtime_api.h>
 #include <cstdio>
+#include <set>
 #include <sys/time.h>
 #include <iostream>
 #include <cupti.h>
@@ -118,6 +119,24 @@ int main() {
 
   // myInitTrace();
   libkineto_init(/*cpuOnly=*/false, /*logOnError=*/true);
+  if (!libkineto::api().isProfilerInitialized()) {
+    libkineto::api().initProfilerIfRegistered();
+  }
+
+	const std::set<libkineto::ActivityType> kCudaTypes = {
+			libkineto::ActivityType::GPU_MEMCPY,
+			libkineto::ActivityType::GPU_MEMSET,
+			libkineto::ActivityType::CONCURRENT_KERNEL,
+			// CUDA_RUNTIME appears in both kCpuTypes and kCudaTypes.
+			libkineto::ActivityType::CUDA_RUNTIME,
+	};
+
+  std::set<libkineto::ActivityType> k_activities;
+  k_activities.insert(kCudaTypes.begin(), kCudaTypes.end());
+
+  libkineto::api().activityProfiler().prepareTrace(k_activities);
+
+  libkineto::api().activityProfiler().startTrace();
 
   {
     TimerGuard guard("WITH cuda graph");
@@ -132,9 +151,10 @@ int main() {
         graphCreated=true;
         cudaGraphLaunch(instance, stream);
       }
-      cudaStreamSynchronize(stream);
     }
+    cudaStreamSynchronize(stream);
   }
+  libkineto::api().activityProfiler().stopTrace();
 
   /*
   CUPTI_CALL(

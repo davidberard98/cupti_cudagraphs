@@ -37,13 +37,14 @@ endif()
 include_directories(${PROJECT_SOURCE_DIR}/kineto/libkineto)
 
 add_subdirectory("kineto/libkineto")
+target_compile_options(kineto PRIVATE "-g")
 
 add_executable(cupti_cudagraphs vec.cu cuda_graphs_trace.cpp)
 
 set_target_properties( cupti_cudagraphs
                        PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 set(CMAKE_CUDA_FLAGS -arch=sm_80)
-target_compile_options(cupti_cudagraphs PUBLIC -lcupti -lcuda)
+target_compile_options(cupti_cudagraphs PUBLIC -lcupti -lcuda -g)
 target_include_directories(cupti_cudagraphs PUBLIC
       $<BUILD_INTERFACE:${CUDA_INCLUDE_DIRS}>
       $<BUILD_INTERFACE:${CUPTI_INCLUDE_DIR}>
