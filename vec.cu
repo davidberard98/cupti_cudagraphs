@@ -79,9 +79,9 @@ void CUPTIAPI callback_switchboard_(
 }
 void myInitTrace(void) {
   CUpti_SubscriberHandle subscriber{0};
+  CUPTI_CALL(cuptiSubscribe(&subscriber, (CUpti_CallbackFunc)callback_switchboard_, NULL));
   CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_RUNTIME));
   CUPTI_CALL(cuptiActivityRegisterCallbacks(bufferRequestedTrampoline_, bufferCompletedTrampoline_));
-  CUPTI_CALL(cuptiSubscribe(&subscriber, (CUpti_CallbackFunc)callback_switchboard_, NULL));
 }
 
 int main() {
@@ -112,12 +112,6 @@ int main() {
 	cudaGraph_t graph;
 	cudaGraphExec_t instance;
 
-  myInitTrace();
-
-  {
-    TimerGuard guard("WITH cuda graph");
-    for(int istep=0; istep<NSTEP; istep++){
-      if(!graphCreated){
         cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal);
         for(int ikrnl=0; ikrnl<NKERNEL; ikrnl++){
           shortKernel<<<blocks, threads, 0, stream>>>(out_d, in_d);
@@ -125,8 +119,13 @@ int main() {
         cudaStreamEndCapture(stream, &graph);
         cudaGraphInstantiate(&instance, graph, NULL, NULL, 0);
         graphCreated=true;
-        cudaGraphLaunch(instance, stream);
-      }
+
+  myInitTrace();
+
+  {
+    TimerGuard guard("WITH cuda graph");
+    for(int istep=0; istep<NSTEP; istep++){
+      CHECK(cudaGraphLaunch(instance, stream));
       cudaStreamSynchronize(stream);
     }
   }
