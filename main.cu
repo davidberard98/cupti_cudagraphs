@@ -1,9 +1,12 @@
+// modified copy of from NVIDIA's CUPTI cudagraph example
 #include <cstddef>
 #include <cuda_runtime_api.h>
 #include <cstdio>
 #include <sys/time.h>
 #include <iostream>
 #include <cupti.h>
+
+#include "profiling.h"
 
 #define N 500000 // tuned such that kernel takes a few microseconds
 
@@ -52,36 +55,9 @@ struct TimerGuard {
   }
 };
 
-extern void initTrace(void);
-extern void finiTrace(void);
-
-void CUPTIAPI bufferRequestedTrampoline_(
-  uint8_t** buffer,
-  size_t* size,
-	size_t* maxNumRecords) {
-  // TODO
-}
-
-void CUPTIAPI bufferCompletedTrampoline_(
-  CUcontext ctx,
-  uint32_t streamId,
-  uint8_t* buffer,
-  size_t /* unused */,
-	size_t validSize) {
-  // TODO
-}
-
-void CUPTIAPI callback_switchboard_(
-  CUpti_CallbackDomain domain,
-  CUpti_CallbackId cbid,
-  const CUpti_CallbackData* cbInfo) {
-  // TODO
-}
-void myInitTrace(void) {
-  CUpti_SubscriberHandle subscriber{0};
-  CUPTI_CALL(cuptiSubscribe(&subscriber, (CUpti_CallbackFunc)callback_switchboard_, NULL));
-  CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_RUNTIME));
-  CUPTI_CALL(cuptiActivityRegisterCallbacks(bufferRequestedTrampoline_, bufferCompletedTrampoline_));
+void startProfiling() {
+  // initialize static profiling state object, see profiling.cpp
+  getProfilingState();
 }
 
 int main() {
@@ -112,30 +88,25 @@ int main() {
 	cudaGraph_t graph;
 	cudaGraphExec_t instance;
 
-        cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal);
-        for(int ikrnl=0; ikrnl<NKERNEL; ikrnl++){
-          shortKernel<<<blocks, threads, 0, stream>>>(out_d, in_d);
-        }
-        cudaStreamEndCapture(stream, &graph);
-        cudaGraphInstantiate(&instance, graph, NULL, NULL, 0);
-        graphCreated=true;
+  // Initialize cudagraph
+  cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal);
+  for(int ikrnl=0; ikrnl<NKERNEL; ikrnl++){
+    shortKernel<<<blocks, threads, 0, stream>>>(out_d, in_d);
+  }
+  cudaStreamEndCapture(stream, &graph);
+  cudaGraphInstantiate(&instance, graph, NULL, NULL, 0);
+  graphCreated=true;
 
-  myInitTrace();
+  startProfiling();
 
   {
     TimerGuard guard("WITH cuda graph");
     for(int istep=0; istep<NSTEP; istep++){
+      std::cerr << " step " << istep << std::endl;
       CHECK(cudaGraphLaunch(instance, stream));
       cudaStreamSynchronize(stream);
     }
   }
-
-  /*
-  CUPTI_CALL(
-      cuptiActivityRegisterCallbacks(bufferRequestedTrampoline, bufferCompletedTrampoline));
-
-  CUPTI_CALL(cuptiActivityFlushAll(CUPTI_ACTIVITY_FLAG_FLUSH_FORCED));
-  */
 
   return 0;
 }
