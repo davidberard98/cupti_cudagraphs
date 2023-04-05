@@ -69,6 +69,26 @@ Wed Apr  5 11:59:02 2023
 |                               |                      |             Disabled |
 ```
 
-## Hanging process issue (A100, CUDA 11.6, newer drivers)
+## Can't run on the AWS cluster... (A100, CUDA 11.6, newer drivers)
 ```
+$ ./main
+ time without cuda graph: 237342 us
+ | initializing ProfilingState
+functioncuptiSubscribe( &subscriber_, (CUpti_CallbackFunc)callback_switchboard, nullptr) failed with error CUPTI_ERROR_INSUFFICIENT_PRIVILEGES (35)
+functioncuptiActivityRegisterCallbacks(bufferRequestedTrampoline, bufferCompletedTrampoline) failed with error CUPTI_ERROR_INSUFFICIENT_PRIVILEGES (35)
+functioncuptiActivityEnable(CUPTI_ACTIVITY_KIND_MEMCPY) failed with error CUPTI_ERROR_NOT_INITIALIZED (15)
+ step 0
+ step 1
+ step 2
+ step 3
+ step 4
+ step 5
+ step 6
+ step 7
+ step 8
+ step 9
+ step 10
+ step 11
+ step 12
+ step 13
 ```
