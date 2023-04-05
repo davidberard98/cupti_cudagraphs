@@ -8,6 +8,8 @@
 
 #include <libkineto.h>
 
+#include "profiling.h"
+
 #define N 500000 // tuned such that kernel takes a few microseconds
 
 __global__ void shortKernel(float * out_d, float * in_d){
@@ -55,7 +57,8 @@ struct TimerGuard {
   }
 };
 
-void init_and_start_trace() {
+
+void init_and_start_trace_kineto() {
   libkineto_init(/*cpuOnly=*/false, /*logOnError=*/true);
   if (!libkineto::api().isProfilerInitialized()) {
     libkineto::api().initProfilerIfRegistered();
@@ -74,7 +77,11 @@ void init_and_start_trace() {
 
   libkineto::api().activityProfiler().prepareTrace(k_activities);
 
-  libkineto::api().activityProfiler().startTrace();
+  // libkineto::api().activityProfiler().startTrace();
+}
+
+void init_and_start_trace() {
+  getProfilingState();
 }
 
 void stop_trace() {

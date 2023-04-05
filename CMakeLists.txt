@@ -39,7 +39,7 @@ include_directories(${PROJECT_SOURCE_DIR}/kineto/libkineto)
 add_subdirectory("kineto/libkineto")
 target_compile_options(kineto PRIVATE "-g")
 
-add_executable(cupti_cudagraphs vec.cu)
+add_executable(cupti_cudagraphs vec.cu profiling.cpp)
 
 set_target_properties( cupti_cudagraphs
                        PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
